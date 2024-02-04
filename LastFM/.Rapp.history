@@ -1,0 +1,7 @@
+load("/Users/wanjie/Dropbox/Yaofang-Wanjie/Code/LastFM/Country2.Rdata")
+ls()
+errormat
+load("/Users/wanjie/Dropbox/Yaofang-Wanjie/Code/LastFM/Country3.Rdata")
+errormat3
+ls)
+ls()
