@@ -18,7 +18,9 @@
   
 - Nfreq.Rdata: the matrix of paper abstracts.
 
-- Citation_Network.R: the main code file to process the data.
+- paperList.txt: the original file contains DOIs, published years, titles, citation counts, and abstracts of the statistical papers.
+
+- Citation_Network.R: the main code file to process the data, which includes connection.txt and Nfreq.RData.
   
 - VariousFunctions.R: the files containing several community detection methods.
 
