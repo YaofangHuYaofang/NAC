@@ -13,8 +13,7 @@ NAC = function(Adj, Covariate, K, alpha = NULL, beta = 0, itermax = 100, startn 
   # 2) Covariate: an n by p covariate matrix
   # 3) K: a positive integer which is no larger than n. This is the predefined number of communities.
   # 4) alpha: a vector of positive numbers to tune the weight of covariate matrix
-  # 5) alphan: if alpha is not given, alphan is required to find a proper weight by grid search. The 
-  #            default value is 5.
+  # 5) beta: An optional parameter used when the covariate matrix X is uninformative. By default, beta is set as 0 assuming X carries meaningful information. Otherwise, users can manually specify a positive value to weigh network information.
   
   # Optional Arguments for Kmeans:
   # 1) itermax: the maximum number of iterations allowed. Default value 100.
@@ -49,18 +48,19 @@ NAC = function(Adj, Covariate, K, alpha = NULL, beta = 0, itermax = 100, startn 
   
     Newmat = X + alpha*diag(lambda)%*%Covariate;
   zz = Newmat%*%t(Newmat);
+  
   if(beta != 0){
     covmean = colMeans(Covariate, na.rm = TRUE);
     beta = sum(covmean^2);
-    print(beta)
     AA = Adj%*%Adj;
-    print(eigen(beta*n*AA)$values[1:10])
+    zzeig = eigen(zz)$values;
+    aaeig = eigen(AA);
+    if(zzeig[K+1]/zzeig[K] <= 0.9){beta = min(beta, zzeig[1]/aaeig$values[1]/n)}
     zz = zz +  beta*n*AA;
   }
 #    zz = Newmat%*%t(Newmat) + beta*n*A%*%t(A);
     c = eigen(zz)
-    print(c$values[1:10])
-    
+
     vec = c$vectors
     vecn = vec[,1:K]/apply(vec[,1:K], 1, Norm);
     result = kmeans(vecn, K, iter.max = itermax, nstart = startn);
@@ -184,7 +184,7 @@ Net_based <- function(Adj, K, tau = NULL, itermax = 100, startn = 10){
   if(K %% 1 != 0) stop("Error! K is not an integer!")
   if(K <= 0) stop("Error! Nonpositive K!")
   
-  if(is.null(tau)) tau = mean(colSums(Adj));
+  if(is.null(tau)) tau = mean(Adj);
   
   n <- dim(Adj)[1]
   A_tau = Adj + tau * matrix(1, n, n)/n
@@ -265,5 +265,3 @@ Cov_based <- function(Covariate, K, itermax = 100, startn = 10){
   est = as.factor(result$cluster)
   return(est)
 }
-
-
