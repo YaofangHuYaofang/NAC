@@ -13,8 +13,7 @@ NAC = function(Adj, Covariate, K, alpha = NULL, beta = 0, itermax = 100, startn 
   # 2) Covariate: an n by p covariate matrix
   # 3) K: a positive integer which is no larger than n. This is the predefined number of communities.
   # 4) alpha: a vector of positive numbers to tune the weight of covariate matrix
-  # 5) alphan: if alpha is not given, alphan is required to find a proper weight by grid search. The 
-  #            default value is 5.
+  # 5) beta: An optional parameter used when the covariate matrix X is uninformative. By default, beta is set as 0 assuming X carries meaningful information. Otherwise, users can manually specify a positive value to weigh network information.
   
   # Optional Arguments for Kmeans:
   # 1) itermax: the maximum number of iterations allowed. Default value 100.
