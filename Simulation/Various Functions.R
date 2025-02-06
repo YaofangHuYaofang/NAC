@@ -49,17 +49,19 @@ NAC = function(Adj, Covariate, K, alpha = NULL, beta = 0, itermax = 100, startn 
   
     Newmat = X + alpha*diag(lambda)%*%Covariate;
   zz = Newmat%*%t(Newmat);
+  
   if(beta != 0){
     covmean = colMeans(Covariate, na.rm = TRUE);
     beta = sum(covmean^2);
-#    print(beta)
     AA = Adj%*%Adj;
-#    print(eigen(beta*n*AA)$values[1:10])
+    zzeig = eigen(zz)$values;
+    aaeig = eigen(AA);
+    if(zzeig[K+1]/zzeig[K] <= 0.9){beta = min(beta, zzeig[1]/aaeig$values[1]/n)}
     zz = zz +  beta*n*AA;
   }
+#    zz = Newmat%*%t(Newmat) + beta*n*A%*%t(A);
     c = eigen(zz)
-#    print(c$values[1:10])
-    
+
     vec = c$vectors
     vecn = vec[,1:K]/apply(vec[,1:K], 1, Norm);
     result = kmeans(vecn, K, iter.max = itermax, nstart = startn);
@@ -73,53 +75,6 @@ NAC = function(Adj, Covariate, K, alpha = NULL, beta = 0, itermax = 100, startn 
 }
 
 
-
-SCORE = function(Adj, K, itermax = NULL, startn = NULL){
-  # Inputs:
-  # 1) Adj: an n by n symmetric adjacency matrix whose diagonals = 0 and positive entries = 1.
-  # 2) K: a positive integer which is no larger than n. This is the predefined number of communities.
-  
-  # Optional Arguments for Kmeans:
-  # 1) itermax: the maximum number of iterations allowed.
-  # 2) nstart: R will try startn different random starting assignments and then select the one with the lowest within cluster variation.
-  
-  # Outputs:
-  # 1) a factor indicating nodes' labels. Items sharing the same label are in the same community.
-  
-  # Remark:
-  # SCORE only works on connected graphs, i.e., no isolated node is allowed.
-  
-  # exclude all wrong possibilities:
-  if(!isSymmetric(Adj)) stop("Error! Adj is not symmetric!")
-  if(K > dim(Adj)[1]) stop("Error! More communities than nodes!")
-  if(K %% 1 != 0) stop("Error! K is not an integer!")
-  if(K <= 0) stop("Error! Nonpositive K!")
-  
-  g.eigen = eigen(Adj)
-  if(sum(g.eigen$vectors[, 1]==0) > 0) stop("Error! Zeroes in the first column")
-  R = g.eigen$vectors[, -1]
-  R = R[, 1: (K-1)]
-  R = R / g.eigen$vectors[, 1]
-  R[R > sqrt(log(n))] = sqrt(log(n));
-  R[R < -1*sqrt(log(n))] = -1*sqrt(log(n));
-  
-  # apply Kmeans to assign nodes into communities
-  if(!is.null(itermax) & !is.null(startn)){
-    result = kmeans(R, K, iter.max = itermax, nstart = startn) #apply kmeans on ratio matrix
-  }
-  if(!is.null(itermax) & is.null(startn)){
-    result = kmeans(R, K, iter.max = itermax, nstart = 10) #apply kmeans on ratio matrix
-  }
-  if(is.null(itermax) & !is.null(startn)){
-    result = kmeans(R, K, iter.max = 100, nstart = startn) #apply kmeans on ratio matrix
-  }
-  else{
-    result = kmeans(R, K, iter.max = 100, nstart = 10) #apply kmeans on ratio matrix
-  }
-  
-  est = as.factor(result$cluster)
-  return(est)
-}
 
 
 CAclustering = function(Adj, Covariate, K, alphan = 5, itermax = 100, startn = 10){
@@ -224,13 +179,13 @@ admm = function(A, C, lambda, K, alpha, rho, TT, tol, quiet = NULL,
 }
 
 ## Network-based: Regularized Spectral Clustering
-Net_based <- function(Adj, K, tau = NULL, itermax = NULL, startn = NULL){
+Net_based <- function(Adj, K, tau = NULL, itermax = 100, startn = 10){
   if(!isSymmetric(Adj)) stop("Error! Adj is not symmetric!")
   if(K > dim(Adj)[1]) stop("Error! More communities than nodes!")
   if(K %% 1 != 0) stop("Error! K is not an integer!")
   if(K <= 0) stop("Error! Nonpositive K!")
   
-  if(is.null(tau)) tau = mean(colSums(Adj));
+  if(is.null(tau)) tau = mean(Adj);
   
   n <- dim(Adj)[1]
   A_tau = Adj + tau * matrix(1, n, n)/n
@@ -247,18 +202,45 @@ Net_based <- function(Adj, K, tau = NULL, itermax = NULL, startn = NULL){
   R <- t(apply(R, 1, function(x) x/sqrt(sum(x^2))))
   
   # apply Kmeans to assign nodes into communities
-  if(!is.null(itermax) & !is.null(startn)){
-    result = kmeans(R, K, iter.max = itermax, nstart = startn) #apply kmeans on ratio matrix
-  }
-  if(!is.null(itermax) & is.null(startn)){
-    result = kmeans(R, K, iter.max = itermax, nstart = 10) #apply kmeans on ratio matrix
-  }
-  if(is.null(itermax) & !is.null(startn)){
-    result = kmeans(R, K, iter.max = 100, nstart = startn) #apply kmeans on ratio matrix
-  }
-  else{
-    result = kmeans(R, K, iter.max = 100, nstart = 10) #apply kmeans on ratio matrix
-  }
+  result = kmeans(R, K, iter.max = itermax, nstart = startn) #apply kmeans on ratio matrix
+  
+  est = as.factor(result$cluster)
+  return(est)
+}
+
+
+
+SCORE = function(Adj, K, itermax = 100, startn = 10){
+  # Inputs:
+  # 1) Adj: an n by n symmetric adjacency matrix whose diagonals = 0 and positive entries = 1.
+  # 2) K: a positive integer which is no larger than n. This is the predefined number of communities.
+  
+  # Optional Arguments for Kmeans:
+  # 1) itermax: the maximum number of iterations allowed.
+  # 2) nstart: R will try startn different random starting assignments and then select the one with the lowest within cluster variation.
+  
+  # Outputs:
+  # 1) a factor indicating nodes' labels. Items sharing the same label are in the same community.
+  
+  # Remark:
+  # SCORE only works on connected graphs, i.e., no isolated node is allowed.
+  
+  # exclude all wrong possibilities:
+  if(!isSymmetric(Adj)) stop("Error! Adj is not symmetric!")
+  if(K > dim(Adj)[1]) stop("Error! More communities than nodes!")
+  if(K %% 1 != 0) stop("Error! K is not an integer!")
+  if(K <= 0) stop("Error! Nonpositive K!")
+  
+  g.eigen = eigen(Adj)
+  if(sum(g.eigen$vectors[, 1]==0) > 0) stop("Error! Zeroes in the first column")
+  R = g.eigen$vectors[, -1]
+  R = R[, 1: (K-1)]
+  R = R / g.eigen$vectors[, 1]
+  R[R > sqrt(log(n))] = sqrt(log(n));
+  R[R < -1*sqrt(log(n))] = -1*sqrt(log(n));
+  
+  # apply Kmeans to assign nodes into communities
+  result = kmeans(R, K, iter.max = itermax, nstart = startn) #apply kmeans on ratio matrix
   
   est = as.factor(result$cluster)
   return(est)
@@ -268,7 +250,7 @@ Net_based <- function(Adj, K, tau = NULL, itermax = NULL, startn = NULL){
 # find top K eigen-vectors of X*X^T (an n by n matrix), 
 # and apply K-means on the n by K eigen-vector matrix
 
-Cov_based <- function(Covariate, K, itermax = NULL, startn = NULL){
+Cov_based <- function(Covariate, K, itermax = 100, startn = 10){
   if(K > dim(Covariate)[1]) stop("Error! More communities than nodes!")
   if(K %% 1 != 0) stop("Error! K is not an integer!")
   if(K <= 0) stop("Error! Nonpositive K!")
@@ -279,21 +261,9 @@ Cov_based <- function(Covariate, K, itermax = NULL, startn = NULL){
   R = g.eigen$vectors
   R = R[, 1: K]
   # apply Kmeans to assign nodes into communities
-  if(!is.null(itermax) & !is.null(startn)){
-    result = kmeans(R, K, iter.max = itermax, nstart = startn) #apply kmeans on ratio matrix
-  }
-  if(!is.null(itermax) & is.null(startn)){
-    result = kmeans(R, K, iter.max = itermax, nstart = 10) #apply kmeans on ratio matrix
-  }
-  if(is.null(itermax) & !is.null(startn)){
-    result = kmeans(R, K, iter.max = 100, nstart = startn) #apply kmeans on ratio matrix
-  }
-  else{
-    result = kmeans(R, K, iter.max = 100, nstart = 10) #apply kmeans on ratio matrix
-  }
+  result = kmeans(R, K, iter.max = itermax, nstart = startn) #apply kmeans on ratio matrix
   
   est = as.factor(result$cluster)
   return(est)
 }
-
 
