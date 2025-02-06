@@ -1,3 +1,4 @@
+
 library(pracma)
 source("projSp.R") # for ADMM
 source("rsc.R") # for ADMM
@@ -265,4 +266,3 @@ Cov_based <- function(Covariate, K, itermax = 100, startn = 10){
   est = as.factor(result$cluster)
   return(est)
 }
-
