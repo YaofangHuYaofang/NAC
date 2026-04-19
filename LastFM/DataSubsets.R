@@ -16,7 +16,7 @@ allcomp <- function(A, X, label, class){
   # NAC
   t1 = Sys.time()
   d = rowSums(A1);
-  est_nac = NAC(A1, X1, kk, alpha = mean(d)/2, beta = 0, startn = 50)
+  est_nac = NAC(A1, X1, kk, beta = 0, startn = 50)
   est_nac[is.na(est_nac)] = which.max(summary(as.factor(est_nac)))
   timeresult["NAC"] = Sys.time() - t1
   result["NAC"] = NMI(est_nac, label)
@@ -25,7 +25,7 @@ allcomp <- function(A, X, label, class){
   # NAGC
   t1 = Sys.time()
   d = rowSums(A1);
-  est_nagc = NAC(A1, X1, kk, alpha = mean(d)/2, beta = 1, startn = 50)
+  est_nagc = NAC(A1, X1, kk, beta = 1, startn = 50)
   est_nagc[is.na(est_nagc)] = which.max(summary(as.factor(est_nac)))
   timeresult["NAGC"] = Sys.time() - t1
   result["NAGC"] = NMI(est_nagc, label)
